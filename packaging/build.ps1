@@ -27,5 +27,5 @@ if ($iscc) {
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
     Write-Host "OK: dist\PixelBuddy-Setup.exe"
 } else {
-    Write-Host "ไม่พบ Inno Setup (ISCC.exe) - ข้ามขั้นตอนสร้างตัวติดตั้ง (ติดตั้งได้จาก https://jrsoftware.org/isinfo.php แล้วรันสคริปต์นี้ใหม่)"
+    Write-Host "Inno Setup (ISCC.exe) not found - skipping installer build (install it from https://jrsoftware.org/isinfo.php and rerun this script)"
 }

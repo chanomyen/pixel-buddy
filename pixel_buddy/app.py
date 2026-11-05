@@ -17,7 +17,7 @@ WIN_H = 120        # overlay height in px
 FEET_SINK = 2      # feet sink this many px into the taskbar so they look like they stand on it
 ICON_SCALE = 3
 SPEED = {"idle": 22, "thinking": 16, "tool": 70}   # px / second
-IDLE_VIEW = View("_none", "", "sleep", "", "unknown", "", 0, "Claude Code: ยังไม่มี session ที่ทำงานอยู่\n(เริ่ม claude แล้วน้องจะตื่น)")
+IDLE_VIEW = View("_none", "", "sleep", "", "unknown", "", 0, "Claude Code: no active session\n(start claude and the buddy will wake up)")
 
 
 class Actor:
@@ -256,8 +256,8 @@ def main() -> None:
         start_server(mgr, port)
     except OSError:
         QMessageBox.warning(None, "Pixel Buddy",
-                            f"พอร์ต {port} ถูกใช้อยู่ — เปิด Pixel Buddy ซ้ำหรือเปล่า?\n"
-                            "(เปลี่ยนพอร์ตได้ที่ config.json หรือตัวแปร PIXEL_BUDDY_PORT)")
+                            f"Port {port} is already in use — is Pixel Buddy already running?\n"
+                            "(change the port in config.json or the PIXEL_BUDDY_PORT variable)")
         sys.exit(1)
 
     win = Overlay(mgr, str(cfg.get("skin") or "cat"))

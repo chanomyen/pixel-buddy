@@ -113,28 +113,28 @@ class SheetSkin(Skin):
             try:
                 man = json.loads(mf.read_text(encoding="utf-8"))
             except (OSError, ValueError) as e:
-                raise ValueError(f"อ่าน skin.json ไม่ได้: {e}") from e
+                raise ValueError(f"Cannot read skin.json: {e}") from e
             if not isinstance(man, dict):
-                raise ValueError("skin.json ต้องเป็น object")
+                raise ValueError("skin.json must be an object")
         sheet = folder / str(man.get("sheet") or "sheet.png")
         if sheet.parent != folder or not sheet.is_file():
-            raise ValueError(f"ไม่พบไฟล์ภาพ {sheet.name}")
+            raise ValueError(f"Image file not found: {sheet.name}")
         img = QImage(str(sheet))
         if img.isNull():
-            raise ValueError(f"เปิดภาพ {sheet.name} ไม่ได้ (ต้องเป็น PNG)")
+            raise ValueError(f"Cannot open image {sheet.name} (must be PNG)")
         img = img.convertToFormat(QImage.Format_ARGB32_Premultiplied)
         try:
             fw = int(man.get("frame_w") or img.width())
             fh = int(man.get("frame_h") or img.height())
         except (TypeError, ValueError) as e:
-            raise ValueError("frame_w / frame_h ต้องเป็นตัวเลข") from e
+            raise ValueError("frame_w / frame_h must be numbers") from e
         if not (1 <= fw <= MAX_FRAME and 1 <= fh <= MAX_H):
-            raise ValueError(f"ขนาดเฟรมต้องกว้างไม่เกิน {MAX_FRAME} และสูงไม่เกิน {MAX_H} px")
+            raise ValueError(f"Frame must be at most {MAX_FRAME} px wide and {MAX_H} px tall")
         if img.width() < fw or img.height() < fh:
-            raise ValueError("ภาพเล็กกว่าขนาดเฟรม")
+            raise ValueError("Image is smaller than the frame size")
         order = man.get("poses") or list(POSES)
         if not isinstance(order, list) or not all(isinstance(x, str) for x in order):
-            raise ValueError("poses ต้องเป็นรายชื่อท่า")
+            raise ValueError("poses must be a list of pose names")
         frames: dict[str, list[QImage]] = {}
         for row, pose in enumerate(order):
             if (row + 1) * fh > img.height():
@@ -144,11 +144,11 @@ class SheetSkin(Skin):
             if cells:
                 frames[pose] = cells
         if "sit" not in frames:
-            raise ValueError("ไม่พบท่า sit (แถวแรกของภาพต้องมีรูป)")
+            raise ValueError("No sit pose found (the first row of the image must contain art)")
         try:
             scale = int(man.get("scale") or max(1, round(64 / fw)))
         except (TypeError, ValueError) as e:
-            raise ValueError("scale ต้องเป็นจำนวนเต็ม") from e
+            raise ValueError("scale must be an integer") from e
         scale = max(1, min(scale, 8, MAX_H // fh, 400 // fw))
         chest = man.get("chest")
         if chest is not None:
@@ -157,7 +157,7 @@ class SheetSkin(Skin):
                 if len(chest) != 4:
                     raise ValueError
             except (TypeError, ValueError) as e:
-                raise ValueError("chest ต้องเป็น [x, y, กว้าง, สูง]") from e
+                raise ValueError("chest must be [x, y, width, height]") from e
         return cls(sid, str(man.get("name") or folder.name), frames, fw, fh, scale, chest)
 
     def scale(self, family: str) -> int:
@@ -202,7 +202,7 @@ def _has_pixels(img: QImage) -> bool:
 
 # ---- registry ------------------------------------------------------------
 def builtins() -> list[Skin]:
-    return [BuiltinSkin("cat", "แมว", "cat"), BuiltinSkin("bunny", "กระต่าย", "bunny")]
+    return [BuiltinSkin("cat", "Cat", "cat"), BuiltinSkin("bunny", "Bunny", "bunny")]
 
 
 _cache: tuple | None = None      # (signature, skins, errors)
@@ -251,7 +251,7 @@ def import_skin(src: Path) -> tuple[str | None, str]:
         if ext == ".png":
             img = QImage(str(src))
             if img.isNull():
-                raise ValueError("เปิดภาพไม่ได้")
+                raise ValueError("Cannot open image")
             shutil.copy2(src, dst / "sheet.png")
             (dst / "skin.json").write_text(json.dumps(
                 {"name": src.stem, "frame_w": img.width(), "frame_h": img.height()}, ensure_ascii=False, indent=2),
@@ -264,7 +264,7 @@ def import_skin(src: Path) -> tuple[str | None, str]:
             shutil.copy2(src, dst / "skin.json")
             shutil.copy2(src.parent / sheet, dst / sheet)
         else:
-            raise ValueError("รองรับเฉพาะ .png, .zip หรือ skin.json")
+            raise ValueError("Only .png, .zip or skin.json supported")
         sk = SheetSkin.load(dst, f"u:{dst.name}")
         return sk.id, ""
     except (OSError, ValueError, zipfile.BadZipFile) as e:
@@ -275,7 +275,7 @@ def import_skin(src: Path) -> tuple[str | None, str]:
 def _extract_zip(zpath: Path, dst: Path) -> None:
     with zipfile.ZipFile(zpath) as z:
         if sum(i.file_size for i in z.infolist()) > MAX_ZIP:
-            raise ValueError("ไฟล์ zip ใหญ่เกินไป")
+            raise ValueError("Zip file too large")
         files = [i for i in z.infolist() if not i.is_dir() and ".." not in i.filename]   # also blocks zip-slip
         names = [i.filename.replace("\\", "/") for i in files]
         # skin may sit at the zip root or inside a single top-level folder

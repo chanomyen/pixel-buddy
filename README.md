@@ -1,59 +1,59 @@
 # 🐾 Pixel Buddy
 
-แมวพิกเซลตัวเล็ก ๆ ที่วิ่งเล่นบน Task Bar ของ Windows 11 และสะท้อนว่า **Claude Code** กำลังทำอะไร ด้วยโมเดลอะไร
+Tiny pixel cats that roam your Windows 11 taskbar and mirror what **Claude Code** is doing, and with which model.
 
-| สถานะ Claude Code | น้องแมวทำอะไร |
+| Claude Code state | What the cat does |
 |---|---|
-| ไม่มี session | นอนหลับ 💤 (ตัวเดียว) |
-| ว่าง รอคำสั่ง | เดินเล่นช้า ๆ / นั่งกระพริบตา / หลับเมื่อว่างเกิน 60 วิ |
-| กำลังคิด | เดินช้า มีจุด `...` ลอยเหนือหัว |
-| `Read` `Grep` `Glob` | วิ่ง + ไอคอนแว่นขยาย |
-| `Edit` `Write` | วิ่ง + ไอคอนดินสอ |
-| `Bash` | วิ่งเร็ว + ไอคอนเทอร์มินัล |
-| `WebSearch` `WebFetch` | วิ่ง + ไอคอนโลก |
-| เครื่องมืออื่น / MCP | วิ่ง + ไอคอนเฟือง |
-| Subagent ทำงาน | มีแมวจิ๋วตามหลังตัวละ 1 subagent (สูงสุด 4) |
-| รอคุณอนุมัติ / ตอบ | กระโดด โบกมือ + เครื่องหมาย `?` |
-| เสร็จ (Stop) | ตาหยี กระโดดดีใจ + ✓ |
-| API error (StopFailure) | ตา X + `!` |
+| No session | Sleeps 💤 (single cat) |
+| Idle, waiting for input | Strolls slowly / sits and blinks / falls asleep after 60 s idle |
+| Thinking | Walks slowly, `...` floats above its head |
+| `Read` `Grep` `Glob` | Runs + magnifier icon |
+| `Edit` `Write` | Runs + pencil icon |
+| `Bash` | Runs fast + terminal icon |
+| `WebSearch` `WebFetch` | Runs + globe icon |
+| Other tools / MCP | Runs + gear icon |
+| Subagent running | One mini cat follows behind per subagent (max 4) |
+| Waiting for your approval / answer | Jumps, waves + `?` mark |
+| Done (Stop) | Squinting eyes, happy jump + ✓ |
+| API error (StopFailure) | X eyes + `!` |
 
-**โมเดลดูจากสี:** Sonnet = ส้ม · Haiku = เขียวมิ้นต์ (ตัวเล็กกว่า) · Opus = ม่วง + มงกุฎ · Fable/Mythos = ทอง + มงกุฎ
-เอาเมาส์ชี้ (หรือคลิก) ที่ตัวแมวเพื่อดู tooltip: โปรเจกต์ · ชื่อโมเดล · งานที่ทำ · เวลาที่ใช้ไป
-หลาย session พร้อมกัน = หลายตัว (1 session / ตัว) คลิกขวาที่ตัวแมวหรือไอคอนใน system tray เพื่อเปิดเมนู
+**Model is shown by colour:** Sonnet = orange · Haiku = mint green (smaller) · Opus = purple + crown · Fable/Mythos = gold + crown
+Hover (or click) a cat to see a tooltip: project · model name · current task · elapsed time.
+Multiple sessions at once = multiple cats (1 session per cat). Right-click a cat or the system tray icon for the menu.
 
-## ติดตั้ง
+## Install
 
-### แบบโปรแกรม (แนะนำ — ไม่ต้องมี Python)
+### As a program (recommended — no Python needed)
 
-รัน `PixelBuddy-Setup.exe` (ติดตั้งแบบ per-user ไม่ต้องใช้สิทธิ์ admin) ตอนติดตั้งเลือกได้ว่าจะ
-- ☑ เปิดอัตโนมัติเมื่อเริ่ม Windows
-- ☑ ติดตั้ง hooks ใน Claude Code (สำรอง `~/.claude/settings.json` เดิมให้)
+Run `PixelBuddy-Setup.exe` (per-user install, no admin rights needed). During setup you can choose to:
+- ☑ Run automatically at Windows startup
+- ☑ Install hooks in Claude Code (your existing `~/.claude/settings.json` is backed up)
 
-ถอนการติดตั้งจาก Settings → Apps จะลบ autostart และถอน hooks ให้ด้วย
-สร้างตัวติดตั้งเอง: `powershell -ExecutionPolicy Bypass -File packaging\build.ps1` (ต้องมี [Inno Setup 6](https://jrsoftware.org/isinfo.php) สำหรับขั้นสุดท้าย; ถ้าไม่มีจะได้แค่ `dist\PixelBuddy\PixelBuddy.exe`)
+Uninstalling from Settings → Apps removes the autostart entry and the hooks too.
+Build the installer yourself: `powershell -ExecutionPolicy Bypass -File packaging\build.ps1` ([Inno Setup 6](https://jrsoftware.org/isinfo.php) is required for the final step; without it you only get `dist\PixelBuddy\PixelBuddy.exe`)
 
-### เมนูที่ system tray (คลิกขวาไอคอน หรือคลิกขวาที่ตัวน้อง)
+### System tray menu (right-click the icon, or right-click a buddy)
 
-| เมนู | ทำอะไร |
+| Menu item | What it does |
 |---|---|
-| รายการ session | ดูสถานะแต่ละ session |
-| น้อง (สกิน) | เลือกตัวละคร: **แมว**, **กระต่าย** (มีให้) หรือสกินที่คุณทำเอง |
-| นำเข้าสกิน… / เปิดโฟลเดอร์สกิน | เพิ่มสกินของตัวเอง (ดูด้านล่าง) |
-| เปิดตอนเริ่ม Windows | เปิด/ปิด autostart (เขียน `HKCU\...\Run` ไม่ต้องใช้ admin) |
-| Claude Code hooks | ติดตั้ง / อัปเดต / ถอน hooks (แจ้งถ้าพอร์ตไม่ตรง) |
-| ออก | ปิดโปรแกรม |
+| Session list | Shows the status of each session |
+| Buddy (skin) | Pick a character: **Cat**, **Bunny** (built in) or your own skin |
+| Import skin… / Open skins folder | Add your own skin (see below) |
+| Run at Windows startup | Toggle autostart (writes `HKCU\...\Run`, no admin needed) |
+| Claude Code hooks | Install / update / remove hooks (warns if the port doesn't match) |
+| Quit | Exit the program |
 
-การตั้งค่าเก็บที่ `%APPDATA%\PixelBuddy\config.json` (`skin`, `port`) สกินของผู้ใช้อยู่ที่ `%APPDATA%\PixelBuddy\skins\`
+Settings are stored in `%APPDATA%\PixelBuddy\config.json` (`skin`, `port`). User skins live in `%APPDATA%\PixelBuddy\skins\`.
 
-### ทำสกินของตัวเอง
+### Make your own skin
 
-ง่ายสุด: วาดรูป PNG พื้นหลังโปร่งใส 1 ไฟล์ (สูงไม่เกิน 90 px กว้างไม่เกิน 256 px) แล้วเลือก **นำเข้าสกิน…** รูปเดียวจะใช้ทุกท่า (กระโดด/เด้งตามสถานะให้เอง)
+Easiest: draw a single transparent-background PNG (at most 90 px tall and 256 px wide) and choose **Import skin…**. The one image is used for every pose (jumping/bobbing by state is applied automatically).
 
-อยากให้ขยับ: ทำ **sprite sheet** — 1 แถว = 1 ท่า, 1 คอลัมน์ = 1 เฟรม (ช่องว่างเปล่าท้ายแถวจะถูกข้าม) ลำดับแถวเริ่มต้น `sit, walk, run, sleep, alert, happy, error` (ท่าที่ไม่มีจะใช้ท่าใกล้เคียง; ต้องมี `sit` อย่างน้อย) แล้วใส่ `skin.json` คู่กัน (นำเข้าเป็น `.zip` ที่มี `sheet.png` + `skin.json` หรือเลือก `skin.json` ได้):
+Want animation: make a **sprite sheet** — 1 row = 1 pose, 1 column = 1 frame (empty cells at the end of a row are skipped). Default row order is `sit, walk, run, sleep, alert, happy, error` (missing poses fall back to a similar one; `sit` is required). Add a `skin.json` alongside (import as a `.zip` containing `sheet.png` + `skin.json`, or pick `skin.json` directly):
 
 ```json
 {
-  "name": "น้องหมา",
+  "name": "Doggo",
   "frame_w": 24, "frame_h": 20,
   "scale": 3,
   "poses": ["sit", "walk", "run", "sleep", "alert", "happy", "error"],
@@ -61,53 +61,53 @@
 }
 ```
 
-`name`, `scale`, `poses`, `chest` (กรอบพิมพ์ตัวอักษรย่อโปรเจกต์ที่หน้าอก `[x, y, กว้าง, สูง]` หน่วยพิกเซลของรูปต้นฉบับ — ไม่ใส่ = ไม่แสดง) ไม่บังคับ ถ้าไม่ใส่ `frame_w/frame_h` จะถือว่าทั้งรูปคือ 1 เฟรม
-สกินของผู้ใช้ **ไม่เปลี่ยนสีตามโมเดล** (สีตามโมเดลมีเฉพาะสกินที่มีให้)
+`name`, `scale`, `poses` and `chest` are optional (`chest` is the box where the project initial is drawn on the chest, `[x, y, width, height]` in source-image pixels — omit it to hide the initial). Without `frame_w/frame_h` the whole image is treated as a single frame.
+User skins **do not change colour by model** (model colours apply only to the built-in skins).
 
-### แบบรันจากซอร์ส (นักพัฒนา)
+### Run from source (developers)
 
-ต้องมี Python 3.10+ บน Windows
+Requires Python 3.10+ on Windows.
 
 ```powershell
 cd pixel-buddy
 pip install -r requirements.txt
-python install_hooks.py          # หรือกดจากเมนู tray; สำรองไฟล์เดิมให้อัตโนมัติ
-python -m pixel_buddy           # หรือดับเบิลคลิก buddy.pyw (ไม่มีหน้าต่าง console)
+python install_hooks.py          # or use the tray menu; backs up your existing file automatically
+python -m pixel_buddy           # or double-click buddy.pyw (no console window)
 ```
 
-จากนั้นเปิด Claude Code session ใหม่ แล้วพิมพ์ `/hooks` เพื่อตรวจว่ามี hook ของ Buddy อยู่
+Then start a new Claude Code session and type `/hooks` to check that the Buddy hooks are present.
 
-ลองก่อนโดยไม่ต้องใช้ Claude Code: `python simulate.py --model claude-opus-4-1 --loop`
-(เปิดเทอร์มินัลที่สองรันซ้ำด้วย `--sid b --model claude-haiku-4-5` เพื่อดูหลายตัว)
+Try it without Claude Code: `python simulate.py --model claude-opus-4-1 --loop`
+(run it again in a second terminal with `--sid b --model claude-haiku-4-5` to see multiple cats)
 
-ถอนการติดตั้ง hooks: `python install_hooks.py --uninstall`
+Uninstall hooks: `python install_hooks.py --uninstall`
 
-## ทำงานยังไง
+## How it works
 
 ```
-Claude Code ──hook (HTTP POST)──▶ 127.0.0.1:7777 ──▶ core.py (state ต่อ session) ──▶ app.py วาดบน Task Bar
+Claude Code ──hook (HTTP POST)──▶ 127.0.0.1:7777 ──▶ core.py (per-session state) ──▶ app.py paints on the taskbar
 ```
 
-- `install_hooks.py` ลงทะเบียน hook แบบ `http` ให้ 13 event (SessionStart/End, UserPromptSubmit, Pre/PostToolUse, PostToolUseFailure, PermissionRequest, Notification, SubagentStart/Stop, Stop, StopFailure, PostModelSwitch) ถ้าโปรแกรมไม่ได้เปิดอยู่ hook จะล้มเหลวแบบ non-blocking ไม่กระทบ Claude Code
-- Claude Code เวอร์ชันเก่าที่ยังไม่มี HTTP hook: `python install_hooks.py --mode command` (ใช้ `buddy_hook.py` ส่งต่อ event)
-- **ชื่อโมเดล**: อ่านจาก `model` ใน SessionStart / PostModelSwitch และจากท้ายไฟล์ transcript (`transcript_path`) ตอน SessionStart, UserPromptSubmit, Stop — เปลี่ยนโมเดลด้วย `/model` กลาง session จะอัปเดตเอง
-- หน้าต่างโปร่งใสไม่มีขอบ always-on-top วางให้ขาแมวแตะขอบบนของ Task Bar (`availableGeometry`) พิกเซลโปร่งใสคลิกทะลุไปยังแอปด้านล่าง
-- ซ่อนอัตโนมัติเมื่อมีแอปเต็มจอ/เกม/นำเสนอ (`SHQueryUserNotificationState`) และดึง z-order กลับมาบนสุดทุกวินาทีเพราะ Windows 11 ชอบดัน Taskbar ขึ้นทับ
+- `install_hooks.py` registers `http` hooks for 13 events (SessionStart/End, UserPromptSubmit, Pre/PostToolUse, PostToolUseFailure, PermissionRequest, Notification, SubagentStart/Stop, Stop, StopFailure, PostModelSwitch). If the program isn't running, the hook fails non-blocking and Claude Code is unaffected.
+- Older Claude Code versions without HTTP hooks: `python install_hooks.py --mode command` (uses `buddy_hook.py` to forward events)
+- **Model name**: read from `model` in SessionStart / PostModelSwitch and from the tail of the transcript file (`transcript_path`) on SessionStart, UserPromptSubmit, Stop — switching models with `/model` mid-session updates automatically.
+- A frameless, transparent, always-on-top window is placed so the cats' feet touch the top edge of the taskbar (`availableGeometry`). Transparent pixels are click-through to the apps beneath.
+- Hides automatically when a fullscreen app/game/presentation is active (`SHQueryUserNotificationState`) and re-raises its z-order every second because Windows 11 likes to push the taskbar above it.
 
-## ปรับแต่ง
+## Customising
 
-| อยากทำ | แก้ที่ |
+| To change | Edit |
 |---|---|
-| วาดแมว/กระต่าย/เปลี่ยนสี/เพิ่มไอคอน | `pixel_buddy/sprites.py` (กริด 16×12 ตัวอักษร, `python preview_sprites.py` ดูตัวอย่าง) |
-| ความเร็ว ขนาด ความสูงหน้าต่าง | ค่าคงที่ต้น `pixel_buddy/app.py` (`SPEED`, `WIN_H`, `FEET_SINK`) และ `BuiltinSkin.scale()` ใน `skins.py` |
-| ข้อความ tooltip | `Manager._view()` ใน `pixel_buddy/core.py` |
-| เปลี่ยนพอร์ต | `port` ใน `config.json` หรือตัวแปรสภาพแวดล้อม `PIXEL_BUDDY_PORT` แล้วกด "ติดตั้ง / อัปเดต hooks" ในเมนู tray (หรือ `install_hooks.py --port ...`) |
+| Draw the cat/bunny, change colours, add icons | `pixel_buddy/sprites.py` (16×12 character grids; `python preview_sprites.py` for a preview) |
+| Speed, size, window height | Constants at the top of `pixel_buddy/app.py` (`SPEED`, `WIN_H`, `FEET_SINK`) and `BuiltinSkin.scale()` in `skins.py` |
+| Tooltip text | `Manager._view()` in `pixel_buddy/core.py` |
+| Change the port | `port` in `config.json` or the `PIXEL_BUDDY_PORT` environment variable, then choose "Install / update hooks" in the tray menu (or `install_hooks.py --port ...`) |
 
-## ข้อจำกัดที่ควรรู้
+## Known limitations
 
-- ดูได้เฉพาะ **Claude Code** (CLI / IDE / Desktop ที่ใช้ Claude Code) — แอปแชท claude.ai ไม่มี hook ให้ดึงสถานะ
-- ชื่อโมเดลใน session ที่เพิ่งเริ่มอาจว่างจนกว่าจะมี event ที่อ่าน transcript ได้ (แสดง "ไม่ทราบโมเดล" เป็นสีเทา)
-- รองรับ Task Bar ด้านล่างจอหลักเป็นหลัก (Task Bar ที่ซ่อนอัตโนมัติ: แมวจะยืนที่ขอบล่างของจอ)
-- ถ้าองค์กรตั้ง `allowedHttpHookUrls` ต้องเพิ่ม `http://127.0.0.1:7777/*` หรือใช้ `--mode command`
-- เซิร์ฟเวอร์ฟังเฉพาะ `127.0.0.1` และเก็บเฉพาะ metadata (ชื่อ tool, โมเดล, โฟลเดอร์) ไม่เก็บเนื้อหาบทสนทนา; โปรเซสอื่นในเครื่องส่ง event ปลอมมาได้ (ผลแค่แมวทำท่าแปลก ๆ)
-- ตำแหน่ง/ลำดับชั้นหน้าต่างบน Taskbar ยังไม่ได้ยืนยันด้วยสายตาบน Windows 11 จริง อาจต้องจูนเล็กน้อย (`FEET_SINK`, `WIN_H`)
+- Only **Claude Code** is observable (CLI / IDE / Desktop using Claude Code) — the claude.ai chat app has no hooks to read state from
+- The model name in a freshly started session may be empty until an event that can read the transcript arrives (shown as a grey "unknown model")
+- Mainly supports a taskbar at the bottom of the primary display (auto-hidden taskbar: the cats stand at the bottom edge of the screen)
+- If your organisation sets `allowedHttpHookUrls`, add `http://127.0.0.1:7777/*` or use `--mode command`
+- The server listens on `127.0.0.1` only and stores only metadata (tool names, model, folder), never conversation content; other local processes can send fake events (the only effect is odd cat behaviour)
+- Window position/z-order on the taskbar has not been verified visually on a real Windows 11 machine and may need slight tuning (`FEET_SINK`, `WIN_H`)

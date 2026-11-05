@@ -28,16 +28,16 @@ def main() -> int:
     try:
         cfg = hooks.read(a.settings)
     except ValueError as e:
-        print(f"อ่าน {a.settings} ไม่ได้ (JSON ไม่ถูกต้อง): {e}")
+        print(f"Cannot read {a.settings} (invalid JSON): {e}")
         return 1
     if a.dry_run:
         print(hooks.render(cfg, a.port, a.mode, a.uninstall))
         return 0
     bak = hooks.apply(a.port, a.mode, a.uninstall, a.settings)
     if bak:
-        print(f"สำรองไฟล์เดิมไว้ที่ {bak}")
-    print(("ถอนการติดตั้ง hooks แล้ว" if a.uninstall else f"ติดตั้ง hooks ({a.mode}) แล้ว") + f" → {a.settings}")
-    print("เปิด session Claude Code ใหม่ (หรือพิมพ์ /hooks ใน Claude Code เพื่อตรวจสอบ)")
+        print(f"Backup of the original saved at {bak}")
+    print(("Hooks uninstalled" if a.uninstall else f"Hooks installed ({a.mode})") + f" → {a.settings}")
+    print("Open a new Claude Code session (or type /hooks in Claude Code to verify)")
     return 0
 
 

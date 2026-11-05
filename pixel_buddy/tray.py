@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSy
 
 from . import autostart, config, hooks, skins
 
-HOOK_LABEL = {"none": "ยังไม่ได้ติดตั้ง", "ok": "ติดตั้งแล้ว", "stale": "ติดตั้งไว้แต่พอร์ตไม่ตรง / ไม่ครบ"}
+HOOK_LABEL = {"none": "not installed", "ok": "installed", "stale": "installed but port mismatch / incomplete"}
 
 
 class TrayController(QObject):
@@ -19,7 +19,7 @@ class TrayController(QObject):
         self.win, self.cfg, self.port = win, cfg, port
         self.menu = QMenu()
         self.menu.aboutToShow.connect(self.rebuild)
-        self.skin_menu = QMenu("น้อง (สกิน)", self.menu)
+        self.skin_menu = QMenu("Buddy (skin)", self.menu)
         self.skin_group = QActionGroup(self.skin_menu)
         self.skin_group.setExclusive(True)
         self.hooks_menu = QMenu(self.menu)
@@ -56,13 +56,13 @@ class TrayController(QObject):
         for v in real:
             m.addAction(v.text.replace("\n", " — ")).setEnabled(False)
         if not real:
-            m.addAction("ยังไม่มี session").setEnabled(False)
+            m.addAction("No sessions yet").setEnabled(False)
         m.addSeparator()
 
         self._fill_skins()
         m.addMenu(self.skin_menu)
 
-        a = m.addAction("เปิดตอนเริ่ม Windows")
+        a = m.addAction("Run at Windows startup")
         a.setCheckable(True)
         a.setChecked(autostart.is_enabled())
         a.triggered.connect(self.toggle_autostart)
@@ -72,11 +72,11 @@ class TrayController(QObject):
         hm.clear()
         hm.setTitle(f"Claude Code hooks: {HOOK_LABEL[st]}")
         m.addMenu(hm)
-        hm.addAction("ติดตั้ง / อัปเดต hooks" if st != "none" else "ติดตั้ง hooks", self.install_hooks)
-        rm = hm.addAction("ถอน hooks", self.uninstall_hooks)
+        hm.addAction("Install / update hooks" if st != "none" else "Install hooks", self.install_hooks)
+        rm = hm.addAction("Remove hooks", self.uninstall_hooks)
         rm.setEnabled(st != "none")
         m.addSeparator()
-        m.addAction("ออก (Quit)", QApplication.quit)
+        m.addAction("Quit", QApplication.quit)
 
     def _fill_skins(self) -> None:
         self.win.skins, errors = skins.discover()
@@ -85,16 +85,16 @@ class TrayController(QObject):
         sm = self.skin_menu
         sm.clear()
         for sk in self.win.skins.values():
-            act = sm.addAction(sk.name if sk.builtin else f"{sk.name} (ของฉัน)")
+            act = sm.addAction(sk.name if sk.builtin else f"{sk.name} (mine)")
             act.setCheckable(True)
             act.setChecked(sk.id == self.win.skin.id)
             self.skin_group.addAction(act)
             act.triggered.connect(lambda _=False, sid=sk.id: self.choose_skin(sid))
         for e in errors:
-            sm.addAction(f"⚠ ใช้ไม่ได้ — {e}").setEnabled(False)
+            sm.addAction(f"⚠ unusable — {e}").setEnabled(False)
         sm.addSeparator()
-        sm.addAction("นำเข้าสกิน… (.png / .zip)", self.import_skin)
-        sm.addAction("เปิดโฟลเดอร์สกิน", lambda: os.startfile(str(config.skins_dir())))
+        sm.addAction("Import skin… (.png / .zip)", self.import_skin)
+        sm.addAction("Open skins folder", lambda: os.startfile(str(config.skins_dir())))
 
     # ---- actions -------------------------------------------------------
     def choose_skin(self, sid: str) -> None:
@@ -105,38 +105,38 @@ class TrayController(QObject):
             self.tray.setIcon(self._icon())
 
     def import_skin(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(None, "นำเข้าสกิน", str(Path.home()),
-                                              "สกิน (*.png *.zip skin.json);;ทั้งหมด (*)")
+        path, _ = QFileDialog.getOpenFileName(None, "Import skin", str(Path.home()),
+                                              "Skins (*.png *.zip skin.json);;All files (*)")
         if not path:
             return
         sid, err = skins.import_skin(Path(path))
         if sid is None:
-            QMessageBox.warning(None, "Pixel Buddy", f"นำเข้าสกินไม่สำเร็จ\n{err}")
+            QMessageBox.warning(None, "Pixel Buddy", f"Skin import failed\n{err}")
             return
         self.win.skins, _ = skins.discover()
         self.choose_skin(sid)
-        self.notify("นำเข้าสกินแล้ว และเปลี่ยนให้เรียบร้อย")
+        self.notify("Skin imported and applied")
 
     def toggle_autostart(self, on: bool) -> None:
         if not autostart.set_enabled(on):
-            QMessageBox.warning(None, "Pixel Buddy", "ตั้งค่าเปิดพร้อม Windows ไม่สำเร็จ")
+            QMessageBox.warning(None, "Pixel Buddy", "Failed to set run-at-startup")
 
     def install_hooks(self) -> None:
         try:
             bak = hooks.apply(self.port)
         except (OSError, ValueError) as e:
-            QMessageBox.warning(None, "Pixel Buddy", f"ติดตั้ง hooks ไม่สำเร็จ\n{e}")
+            QMessageBox.warning(None, "Pixel Buddy", f"Failed to install hooks\n{e}")
             return
-        self.notify("ติดตั้ง hooks แล้ว — เปิด session Claude Code ใหม่"
-                    + (f"\nสำรองไฟล์เดิมไว้ที่ {bak.name}" if bak else ""))
+        self.notify("Hooks installed — open a new Claude Code session"
+                    + (f"\nBackup of the original saved at {bak.name}" if bak else ""))
 
     def uninstall_hooks(self) -> None:
-        if QMessageBox.question(None, "Pixel Buddy", "ถอน hooks ของ Pixel Buddy ออกจาก ~/.claude/settings.json ?"
+        if QMessageBox.question(None, "Pixel Buddy", "Remove Pixel Buddy hooks from ~/.claude/settings.json ?"
                                 ) != QMessageBox.Yes:
             return
         try:
             hooks.apply(self.port, uninstall=True)
         except (OSError, ValueError) as e:
-            QMessageBox.warning(None, "Pixel Buddy", f"ถอน hooks ไม่สำเร็จ\n{e}")
+            QMessageBox.warning(None, "Pixel Buddy", f"Failed to remove hooks\n{e}")
             return
-        self.notify("ถอน hooks แล้ว")
+        self.notify("Hooks removed")

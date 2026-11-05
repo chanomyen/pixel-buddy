@@ -153,7 +153,7 @@ class Manager:
                 if s.state in ("tool", "alert"):
                     self._set(s, "thinking")
             elif ev in ("PermissionRequest",):
-                s.message = "ขออนุญาตใช้เครื่องมือ " + str(p.get("tool_name") or "")
+                s.message = "Permission requested for tool " + str(p.get("tool_name") or "")
                 self._set(s, "alert")
             elif ev == "Notification":
                 if p.get("notification_type") in ALERT_NOTIFICATIONS:
@@ -216,15 +216,15 @@ class Manager:
         proj = os.path.basename(s.cwd.replace("\\", "/").rstrip("/")) or s.sid[:6]
         elapsed = f" · {_fmt(now - s.turn_started)}" if s.turn_started and st in ("thinking", "tool", "alert") else ""
         if st == "tool":
-            what = f"กำลังใช้ {s.tool}" + (f": {s.detail}" if s.detail else "")
+            what = f"Using {s.tool}" + (f": {s.detail}" if s.detail else "")
         else:
             what = {
-                "sleep": "หลับอยู่ 💤", "idle": "ว่าง รอคำสั่ง", "thinking": "กำลังคิด…",
-                "alert": "รอคุณตอบ/อนุมัติ!" + (f" ({s.message})" if s.message else ""),
-                "done": "เสร็จแล้ว ✅", "error": "เกิดข้อผิดพลาด (API) ❌",
+                "sleep": "Sleeping 💤", "idle": "Idle, waiting for input", "thinking": "Thinking…",
+                "alert": "Waiting for your answer/approval!" + (f" ({s.message})" if s.message else ""),
+                "done": "Done ✅", "error": "Error (API) ❌",
             }[st]
         sub = f" · subagent ×{s.agents}" if s.agents else ""
-        text = f"{proj} · {label or 'ไม่ทราบโมเดล'}\n{what}{elapsed}{sub}"
+        text = f"{proj} · {label or 'unknown model'}\n{what}{elapsed}{sub}"
         return View(s.sid, proj, st, s.kind, family, label, s.agents, text)
 
 

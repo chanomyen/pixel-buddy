@@ -26,8 +26,8 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "autostart"; Description: "เปิด Pixel Buddy อัตโนมัติเมื่อเริ่ม Windows (Run at startup)"
-Name: "hooks"; Description: "ติดตั้ง hooks ใน Claude Code (~/.claude/settings.json, สำรองไฟล์เดิมให้)"
+Name: "autostart"; Description: "Run Pixel Buddy automatically at Windows startup"
+Name: "hooks"; Description: "Install hooks in Claude Code (~/.claude/settings.json, original is backed up)"
 
 [Files]
 Source: "..\dist\PixelBuddy\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
@@ -41,7 +41,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [Run]
 Filename: "{app}\{#AppExe}"; Parameters: "--install-hooks"; Flags: runhidden; Tasks: hooks
-Filename: "{app}\{#AppExe}"; Description: "เปิด Pixel Buddy ตอนนี้"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "Launch Pixel Buddy now"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
 Filename: "{sys}\taskkill.exe"; Parameters: "/im {#AppExe} /f"; Flags: runhidden; RunOnceId: "KillBuddy"

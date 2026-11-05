@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Pixel Buddy: Windows 11 desktop overlay (PySide6). Pixel cats walk on the taskbar and mirror live Claude Code session state (one cat per session, colour = model family). README is in Thai; user-facing strings are Thai too — keep that language when editing UI/CLI text.
+Pixel Buddy: Windows 11 desktop overlay (PySide6). Pixel cats walk on the taskbar and mirror live Claude Code session state (one cat per session, colour = model family). README and user-facing strings (UI, CLI, installer) are in English — keep that language when editing UI/CLI text.
 
 ## Commands
 
