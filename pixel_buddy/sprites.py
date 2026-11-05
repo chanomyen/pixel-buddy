@@ -33,6 +33,16 @@ BASE = [
     _row("..", "o", "bblllllbb", "o", "bo."),           # 8 belly / tail
     _row("..", "o", "bbbbbbbbb", "o", "..."),           # 9
 ]
+# Second built-in critter: same eye/nose/belly/chest cells as the cat (rows 4+), so poses, tag and crown line up.
+# Tall narrow ears use rows 0-2 (cols 6-8 stay free for the crown); row 3 is the head-top outline.
+BUNNY = [
+    _row("...", "ooo", "...", "ooo", "...."),            # 0 ear tips
+    _row("...", "obo", "...", "obo", "...."),            # 1 ears
+    _row("...", "obo", "...", "obo", "...."),            # 2 ears
+    _row("..", "ooooooooooo", "..."),                    # 3 top of head
+    *BASE[4:],
+]
+BASES = {"cat": BASE, "bunny": BUNNY}
 LEGS = {
     0: [_row("..", "obo", ".....", "obo", "..."), _row("..", "ooo", ".....", "ooo", "...")],
     1: [_row("...", "obo", "...", "obo", "...."), _row("...", "ooo", "...", "ooo", "....")],
@@ -52,7 +62,7 @@ ICONS = {
 
 for _k, _g in ICONS.items():
     assert len(_g) == ICON and all(len(r) == ICON for r in _g), _k
-assert all(len(r) == W for r in BASE), [len(r) for r in BASE]
+assert all(len(r) == W for b in BASES.values() for r in b), [len(r) for r in BUNNY]
 assert all(len(r) == W for v in LEGS.values() for r in v)
 
 # body colour, light (belly) colour per model family
@@ -88,15 +98,15 @@ def _put(g: list[list[str]], x: int, y: int, c: str) -> None:
         g[y][x] = c
 
 
-def build(pose: str, tick: int, family: str = "sonnet") -> Frame:
-    """pose: sit | walk | run | sleep | alert | happy | error"""
+def build(pose: str, tick: int, family: str = "sonnet", critter: str = "cat") -> Frame:
+    """pose: sit | walk | run | sleep | alert | happy | error;  critter: key of BASES"""
     legs = {"walk": (tick // 2) % 2, "run": tick % 2}.get(pose, 0)
     wag = (tick // 3) % 2 if pose != "sleep" else 0
     blink = pose == "sit" and tick % 48 in (0, 1)
     arm = (tick // 2) % 2 if pose == "alert" else -1
     crown = family in CROWNED
 
-    base = [list(r) for r in BASE]
+    base = [list(r) for r in BASES.get(critter, BASE)]
     dy = 0
     if pose == "sleep":
         # curled loaf: drop legs, shift everything down 2 rows, add a bottom outline
@@ -152,7 +162,7 @@ def build(pose: str, tick: int, family: str = "sonnet") -> Frame:
         yoff = (0, 2, 3, 2)[tick % 4]
 
     grid = tuple("".join(r) for r in g)
-    return Frame(grid=grid, yoff=yoff, key=(pose, legs, wag, eyes, arm, crown))
+    return Frame(grid=grid, yoff=yoff, key=(pose, legs, wag, eyes, arm, crown, critter))
 
 
 def icon_for(state: str, kind: str) -> list[str] | None:

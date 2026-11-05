@@ -1,22 +1,21 @@
 """Overlay window: pixel-art critters that live on top of the Windows taskbar."""
 from __future__ import annotations
 
-import os
 import random
 import sys
 import time
 
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer
-from PySide6.QtGui import QAction, QColor, QFont, QGuiApplication, QIcon, QImage, QPainter, QPixmap
-from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon, QToolTip, QWidget
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QImage, QPainter, QPixmap
+from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QToolTip, QWidget
 
-from . import sprites, taskbar
-from .core import DEFAULT_PORT, Manager, View, start_server
+from . import autostart, config, hooks, skins, sprites, taskbar
+from .core import Manager, View, start_server
+from .tray import TrayController
 
 WIN_H = 120        # overlay height in px
 FEET_SINK = 2      # feet sink this many px into the taskbar so they look like they stand on it
 ICON_SCALE = 3
-SCALE = {"haiku": 3}  # default 4; Haiku is the small, nimble one
 SPEED = {"idle": 22, "thinking": 16, "tool": 70}   # px / second
 IDLE_VIEW = View("_none", "", "sleep", "", "unknown", "", 0, "Claude Code: ยังไม่มี session ที่ทำงานอยู่\n(เริ่ม claude แล้วน้องจะตื่น)")
 
@@ -60,13 +59,16 @@ def pose_for(a: Actor, v: View) -> str:
 
 
 class Overlay(QWidget):
-    def __init__(self, mgr: Manager) -> None:
+    def __init__(self, mgr: Manager, skin_id: str = "cat") -> None:
         super().__init__(None, Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
                          | Qt.WindowDoesNotAcceptFocus | Qt.NoDropShadowWindowHint)
         self.mgr = mgr
         self.actors: dict[str, Actor] = {}
         self.views: list[View] = []
-        self._cache: dict[tuple, QPixmap] = {}
+        self._cache: dict[tuple, QPixmap] = {}      # icons only: critter pixmaps are cached per skin
+        self.menu: QMenu | None = None              # set by TrayController
+        self.skins, _ = skins.discover()
+        self.skin = self.skins.get(skin_id) or self.skins["cat"]
         self._last = time.time()
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -95,6 +97,9 @@ class Overlay(QWidget):
         self.place()
         taskbar.keep_on_top(int(self.winId()))
 
+    def set_skin(self, sid: str) -> None:
+        self.skin = self.skins.get(sid) or self.skins["cat"]
+
     # ---- simulation ----------------------------------------------------
     def tick(self) -> None:
         now = time.time()
@@ -109,7 +114,7 @@ class Overlay(QWidget):
             if a is None:
                 a = self.actors[v.sid] = Actor(random.uniform(40, max(60, self.width() - 100)))
             a.view = v
-            a.step(dt, v, max(0.0, self.width() - 16 * SCALE.get(v.family, 4) - 8))
+            a.step(dt, v, max(0.0, self.width() - self.skin.width(v.family) - 8))
         self.update()
 
     # ---- drawing -------------------------------------------------------
@@ -129,17 +134,14 @@ class Overlay(QWidget):
             pm = self._cache[key] = QPixmap.fromImage(img)
         return pm
 
-    def _critter(self, fr: sprites.Frame, fam: str, scale: int, flip: bool) -> QPixmap:
-        return self._pix(("c", fr.key, fam, scale, flip), fr.grid, sprites.palette(fam), scale, flip)
-
     def paintEvent(self, _event) -> None:
         tick = int(time.time() * 8)
         p = QPainter(self)
         for a in self.actors.values():
             self._draw_actor(p, a, tick)
 
-    def _draw_tag(self, p: QPainter, v: View, x: int, y: int, scale: int, flip: bool, sleeping: bool) -> None:
-        """First 2 letters of the project name, printed on the cat's chest."""
+    def _draw_tag(self, p: QPainter, v: View, x: int, y: int, rect: QRect, scale: int) -> None:
+        """First 2 letters of the project name, printed on the critter's chest."""
         tag = "".join(c for c in v.project if c.isascii() and c.isalnum())[:2].upper()
         if not tag:
             return
@@ -148,10 +150,7 @@ class Overlay(QWidget):
         font.setBold(True)
         font.setStyleStrategy(QFont.NoAntialias)    # crisp, matches the pixel art
         p.setFont(font)
-        # chest = interior cols 3..11, rows 6..9 (sleeping loaf: shifted down 2 rows, 1 row shorter)
-        col0 = 4 if flip else 3                      # mirrored sprite shifts the interior by one cell
-        row0, rows = (8, 3) if sleeping else (6, 4)
-        r = QRect(x + col0 * scale, y + row0 * scale, 9 * scale, rows * scale)
+        r = rect.translated(x, y)
         p.setPen(QColor(255, 255, 255, 110))
         p.drawText(r.translated(0, 1), Qt.AlignCenter, tag)
         p.setPen(QColor("#2b1d14"))
@@ -159,24 +158,26 @@ class Overlay(QWidget):
 
     def _draw_actor(self, p: QPainter, a: Actor, tick: int) -> None:
         v = a.view
-        scale = SCALE.get(v.family, 4)
+        sk = self.skin
+        scale = sk.scale(v.family)
         t = tick + a.seed
         flip = a.dir < 0
 
         # subagents trail behind as tiny critters
         for i in range(min(v.agents, 4)):
-            mini = sprites.build("run" if a.moving else "sit", t + i, v.family)
-            pm = self._critter(mini, v.family, 2, flip)
-            fx = a.x - a.dir * (14 + 18 * i) + (8 * scale - 16)
-            p.drawPixmap(int(fx), int(self.height() - pm.height() - mini.yoff * 2), pm)
+            mpm, myoff = sk.render("run" if a.moving else "sit", t + i, v.family, flip, mini=True)
+            fx = a.x - a.dir * (14 + 18 * i) + (sk.width(v.family) // 2 - mpm.width() // 2)
+            p.drawPixmap(int(fx), int(self.height() - mpm.height() - myoff), mpm)
 
-        fr = sprites.build(pose_for(a, v), t, v.family)
-        pm = self._critter(fr, v.family, scale, flip)
+        pose = pose_for(a, v)
+        pm, yoff = sk.render(pose, t, v.family, flip)
         x = int(a.x)
-        y = int(self.height() - pm.height() - fr.yoff * scale)
+        y = int(self.height() - pm.height() - yoff)
         p.drawPixmap(x, y, pm)
         a.rect = QRect(x, y, pm.width(), pm.height())
-        self._draw_tag(p, v, x, y, scale, flip, sleeping=pose_for(a, v) == "sleep")
+        chest = sk.tag_rect(pose, v.family, flip)
+        if chest:
+            self._draw_tag(p, v, x, y, chest, scale)
 
         cx = x + pm.width() // 2
         icon = sprites.icon_for(v.state, v.kind)
@@ -220,47 +221,48 @@ class Overlay(QWidget):
                 QToolTip.showText(e.globalPosition().toPoint(), a.view.text, self, QRect(), 6000)
 
     def contextMenuEvent(self, e) -> None:
-        self.build_menu().exec(e.globalPos())
+        if self.menu:
+            self.menu.exec(e.globalPos())
 
-    def build_menu(self) -> QMenu:
-        m = QMenu()
-        real = [v for v in self.views if v.sid != "_none"]
-        for v in real:
-            act = QAction(v.text.replace("\n", " — "), m)
-            act.setEnabled(False)
-            m.addAction(act)
-        if not real:
-            act = QAction("ยังไม่มี session", m)
-            act.setEnabled(False)
-            m.addAction(act)
-        m.addSeparator()
-        m.addAction("ออก (Quit)", QApplication.quit)
-        return m
+
+def cleanup(port: int) -> int:
+    """`PixelBuddy.exe --cleanup` (called by the uninstaller): remove autostart + our hooks."""
+    autostart.set_enabled(False)
+    try:
+        if hooks.status(port) != "none":
+            hooks.apply(port, uninstall=True)
+    except (OSError, ValueError):
+        pass
+    return 0
 
 
 def main() -> None:
-    port = int(os.environ.get("PIXEL_BUDDY_PORT", DEFAULT_PORT))
+    cfg = config.load()
+    port = config.port(cfg)
+    if "--cleanup" in sys.argv[1:]:
+        sys.exit(cleanup(port))
+    if "--install-hooks" in sys.argv[1:]:       # called by the installer
+        try:
+            hooks.apply(port)
+        except (OSError, ValueError):
+            sys.exit(1)
+        sys.exit(0)
+
+    app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
+    app.setApplicationName("Pixel Buddy")
     mgr = Manager()
     try:
         start_server(mgr, port)
     except OSError:
-        print(f"พอร์ต {port} ถูกใช้อยู่ — เปิด Pixel Buddy ซ้ำหรือเปล่า? (ตั้ง PIXEL_BUDDY_PORT เพื่อเปลี่ยนพอร์ต)")
+        QMessageBox.warning(None, "Pixel Buddy",
+                            f"พอร์ต {port} ถูกใช้อยู่ — เปิด Pixel Buddy ซ้ำหรือเปล่า?\n"
+                            "(เปลี่ยนพอร์ตได้ที่ config.json หรือตัวแปร PIXEL_BUDDY_PORT)")
         sys.exit(1)
 
-    app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)
-    win = Overlay(mgr)
+    win = Overlay(mgr, str(cfg.get("skin") or "cat"))
     win.show()
-
-    tray_pm = win._critter(sprites.build("sit", 0, "sonnet"), "sonnet", 2, False)
-    tray = QSystemTrayIcon(QIcon(tray_pm), app)
-    tray.setToolTip("Pixel Buddy")
-    tray.setContextMenu(win.build_menu())
-    menu_refresh = QTimer(interval=2000, timeout=lambda: tray.setContextMenu(win.build_menu()))
-    menu_refresh.start()
-    tray.show()
-
-    print(f"Pixel Buddy พร้อมแล้ว — รับ hook ที่ http://127.0.0.1:{port}")
+    TrayController(app, win, cfg, port)         # parented to `app`, so it stays alive
     sys.exit(app.exec())
 
 
