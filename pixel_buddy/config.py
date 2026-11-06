@@ -12,7 +12,7 @@ from pathlib import Path
 from .core import DEFAULT_PORT
 
 APP_NAME = "PixelBuddy"
-DEFAULTS = {"skin": "cat", "port": DEFAULT_PORT, "check_updates": True, "last_update_check": 0.0}
+DEFAULTS = {"skin": "cat", "port": DEFAULT_PORT, "show_tag": True, "check_updates": True, "last_update_check": 0.0}
 
 
 def data_dir() -> Path:

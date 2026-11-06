@@ -80,6 +80,11 @@ class TrayController(QObject):
         self._fill_skins()
         m.addMenu(self.skin_menu)
 
+        a = m.addAction("Show project letters")
+        a.setCheckable(True)
+        a.setChecked(self.win.show_tag)
+        a.triggered.connect(self.toggle_tag)
+
         a = m.addAction("Run at Windows startup")
         a.setCheckable(True)
         a.setChecked(autostart.is_enabled())
@@ -141,6 +146,11 @@ class TrayController(QObject):
         self.win.skins, _ = skins.discover()
         self.choose_skin(sid)
         self.notify("Skin imported and applied")
+
+    def toggle_tag(self, on: bool) -> None:
+        self.win.show_tag = on
+        self.cfg["show_tag"] = on
+        config.save(self.cfg)
 
     def toggle_autostart(self, on: bool) -> None:
         if not autostart.set_enabled(on):

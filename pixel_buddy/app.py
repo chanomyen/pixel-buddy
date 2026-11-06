@@ -59,10 +59,11 @@ def pose_for(a: Actor, v: View) -> str:
 
 
 class Overlay(QWidget):
-    def __init__(self, mgr: Manager, skin_id: str = "cat") -> None:
+    def __init__(self, mgr: Manager, skin_id: str = "cat", show_tag: bool = True) -> None:
         super().__init__(None, Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
                          | Qt.WindowDoesNotAcceptFocus | Qt.NoDropShadowWindowHint)
         self.mgr = mgr
+        self.show_tag = show_tag                    # project letters on the chest
         self.actors: dict[str, Actor] = {}
         self.views: list[View] = []
         self._cache: dict[tuple, QPixmap] = {}      # icons only: critter pixmaps are cached per skin
@@ -176,7 +177,7 @@ class Overlay(QWidget):
         p.drawPixmap(x, y, pm)
         a.rect = QRect(x, y, pm.width(), pm.height())
         chest = sk.tag_rect(pose, v.family, flip)
-        if chest:
+        if chest and self.show_tag:
             self._draw_tag(p, v, x, y, chest, scale)
 
         cx = x + pm.width() // 2
@@ -260,7 +261,7 @@ def main() -> None:
                             "(change the port in config.json or the PIXEL_BUDDY_PORT variable)")
         sys.exit(1)
 
-    win = Overlay(mgr, str(cfg.get("skin") or "cat"))
+    win = Overlay(mgr, str(cfg.get("skin") or "cat"), bool(cfg.get("show_tag", True)))
     win.show()
     TrayController(app, win, cfg, port)         # parented to `app`, so it stays alive
     sys.exit(app.exec())
