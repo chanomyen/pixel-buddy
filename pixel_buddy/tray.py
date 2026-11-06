@@ -2,18 +2,23 @@
 from __future__ import annotations
 
 import os
+import threading
+import time
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer
-from PySide6.QtGui import QActionGroup, QIcon
+from PySide6.QtCore import QObject, QTimer, QUrl, Signal
+from PySide6.QtGui import QActionGroup, QDesktopServices, QIcon
 from PySide6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSystemTrayIcon
 
-from . import autostart, config, hooks, skins
+from . import __version__, autostart, config, hooks, skins, updater
 
 HOOK_LABEL = {"none": "not installed", "ok": "installed", "stale": "installed but port mismatch / incomplete"}
+UPDATE_INTERVAL = 24 * 3600     # min seconds between automatic checks
 
 
 class TrayController(QObject):
+    _update_result = Signal(object, bool)       # (updater.fetch_latest() result, user-initiated)
+
     def __init__(self, app: QApplication, win, cfg: dict, port: int) -> None:
         super().__init__(app)
         self.win, self.cfg, self.port = win, cfg, port
@@ -24,6 +29,14 @@ class TrayController(QObject):
         self.skin_group.setExclusive(True)
         self.hooks_menu = QMenu(self.menu)
         win.menu = self.menu
+
+        self.update: tuple[str, str] | None = None   # (version, url) when a newer release exists
+        self._checking = False
+        self._update_msg = False
+        self._update_result.connect(self._on_update_result)
+        # first check shortly after start, then re-evaluate hourly (actual network call throttled to 24h)
+        QTimer.singleShot(10_000, self._auto_check)
+        QTimer(self, interval=3600_000, timeout=self._auto_check).start()
 
         self.tray: QSystemTrayIcon | None = None
         self._retry = QTimer(self, interval=3000, timeout=self._try_show)
@@ -39,12 +52,14 @@ class TrayController(QObject):
         self.tray = QSystemTrayIcon(self._icon(), self.parent())
         self.tray.setToolTip("Pixel Buddy")
         self.tray.setContextMenu(self.menu)
+        self.tray.messageClicked.connect(self._message_clicked)
         self.tray.show()
 
     def _icon(self) -> QIcon:
         return QIcon(self.win.skin.tray_icon())
 
-    def notify(self, text: str) -> None:
+    def notify(self, text: str, update: bool = False) -> None:
+        self._update_msg = update       # messageClicked only opens the download page for update toasts
         if self.tray:
             self.tray.showMessage("Pixel Buddy", text, QSystemTrayIcon.Information, 4000)
 
@@ -52,6 +67,9 @@ class TrayController(QObject):
     def rebuild(self) -> None:
         m = self.menu
         m.clear()
+        if self.update:
+            m.addAction(f"⬆ Update available: v{self.update[0]} (you have v{__version__})", self.open_update)
+            m.addSeparator()
         real = [v for v in self.win.views if v.sid != "_none"]
         for v in real:
             m.addAction(v.text.replace("\n", " — ")).setEnabled(False)
@@ -76,7 +94,14 @@ class TrayController(QObject):
         rm = hm.addAction("Remove hooks", self.uninstall_hooks)
         rm.setEnabled(st != "none")
         m.addSeparator()
-        m.addAction("Quit", QApplication.quit)
+
+        a = m.addAction("Check for updates automatically")
+        a.setCheckable(True)
+        a.setChecked(bool(self.cfg.get("check_updates", True)))
+        a.triggered.connect(self.toggle_auto_update)
+        m.addAction("Check for updates now", lambda: self.check_updates(manual=True))
+        m.addSeparator()
+        m.addAction(f"Quit (v{__version__})", QApplication.quit)
 
     def _fill_skins(self) -> None:
         self.win.skins, errors = skins.discover()
@@ -140,3 +165,54 @@ class TrayController(QObject):
             QMessageBox.warning(None, "Pixel Buddy", f"Failed to remove hooks\n{e}")
             return
         self.notify("Hooks removed")
+
+    # ---- updates -------------------------------------------------------
+    def toggle_auto_update(self, on: bool) -> None:
+        self.cfg["check_updates"] = on
+        config.save(self.cfg)
+
+    def _auto_check(self) -> None:
+        if not self.cfg.get("check_updates", True):
+            return
+        if time.time() - float(self.cfg.get("last_update_check") or 0) < UPDATE_INTERVAL:
+            return
+        self.check_updates(manual=False)
+
+    def check_updates(self, manual: bool) -> None:
+        if self._checking:
+            return
+        self._checking = True
+        if manual:
+            self.notify("Checking for updates…")
+
+        def work() -> None:
+            self._update_result.emit(updater.fetch_latest(), manual)
+        threading.Thread(target=work, daemon=True, name="update-check").start()
+
+    def _on_update_result(self, result, manual: bool) -> None:
+        self._checking = False
+        if result is not None:       # network failures don't count, so we retry at the next hourly tick
+            self.cfg["last_update_check"] = time.time()
+            config.save(self.cfg)
+        if result is None:
+            if manual:
+                QMessageBox.warning(None, "Pixel Buddy", "Could not check for updates.\nAre you online?")
+            return
+        version, url = result
+        if updater.is_newer(version):
+            first = self.update is None or self.update[0] != version
+            self.update = (version, url)
+            if first or manual:
+                self.notify(f"Update available: v{version} (you have v{__version__}).\nClick to open the download page.", update=True)
+        else:
+            self.update = None
+            if manual:
+                self.notify(f"You're up to date (v{__version__})")
+
+    def _message_clicked(self) -> None:
+        if self.update and self._update_msg:
+            self.open_update()
+
+    def open_update(self) -> None:
+        if self.update:
+            QDesktopServices.openUrl(QUrl(self.update[1]))

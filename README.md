@@ -40,6 +40,7 @@ Build the installer yourself: `powershell -ExecutionPolicy Bypass -File packagin
 | Buddy (skin) | Pick a character: **Cat**, **Bunny** (built in) or your own skin |
 | Import skin… / Open skins folder | Add your own skin (see below) |
 | Run at Windows startup | Toggle autostart (writes `HKCU\...\Run`, no admin needed) |
+| Check for updates automatically / now | Looks up the latest GitHub release (at start, then at most once a day). Shows a toast and a menu entry that opens the download page; nothing is installed automatically. Set `check_updates` to `false` in `config.json` to disable |
 | Claude Code hooks | Install / update / remove hooks (warns if the port doesn't match) |
 | Quit | Exit the program |
 
