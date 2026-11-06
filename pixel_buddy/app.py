@@ -59,7 +59,7 @@ def pose_for(a: Actor, v: View) -> str:
 
 
 class Overlay(QWidget):
-    def __init__(self, mgr: Manager, skin_id: str = "cat", show_tag: bool = True) -> None:
+    def __init__(self, mgr: Manager, skin_id: str = "cat", show_tag: bool = False) -> None:
         super().__init__(None, Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
                          | Qt.WindowDoesNotAcceptFocus | Qt.NoDropShadowWindowHint)
         self.mgr = mgr
@@ -261,7 +261,7 @@ def main() -> None:
                             "(change the port in config.json or the PIXEL_BUDDY_PORT variable)")
         sys.exit(1)
 
-    win = Overlay(mgr, str(cfg.get("skin") or "cat"), bool(cfg.get("show_tag", True)))
+    win = Overlay(mgr, str(cfg.get("skin") or "cat"), bool(cfg.get("show_tag", False)))
     win.show()
     TrayController(app, win, cfg, port)         # parented to `app`, so it stays alive
     sys.exit(app.exec())
