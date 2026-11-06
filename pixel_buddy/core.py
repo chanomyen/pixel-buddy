@@ -49,7 +49,7 @@ def parse_model(model: str | None) -> tuple[str, str]:
         return "", "unknown"
     fam = next((f for f in FAMILIES if f in m), "")
     if not fam:
-        return model or "", "unknown"
+        return model or "", f"other:{m}"  # unknown model name -> random (stable per name) colour
     nums = [p for p in re.split(r"[-_.:@/\s]", m) if p.isdigit() and len(p) <= 2]
     return f"{fam.capitalize()} {'.'.join(nums[:2])}".strip(), fam
 

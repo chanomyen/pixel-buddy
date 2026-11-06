@@ -8,6 +8,8 @@ through palette(). '.' is transparent.
 """
 from __future__ import annotations
 
+import colorsys
+import zlib
 from dataclasses import dataclass
 
 W, H = 16, 12
@@ -77,8 +79,19 @@ FAMILY_COLORS = {
 CROWNED = {"opus", "fable", "mythos"}
 
 
+def _random_colors(seed: str) -> tuple[str, str]:
+    """Pseudo-random body/belly colours, stable for the same model name."""
+    hue = (zlib.crc32(seed.encode()) % 360) / 360
+    body = colorsys.hsv_to_rgb(hue, 0.55, 0.95)
+    light = colorsys.hsv_to_rgb(hue, 0.15, 1.0)
+    return tuple("#%02x%02x%02x" % tuple(round(c * 255) for c in rgb) for rgb in (body, light))
+
+
 def palette(family: str) -> dict[str, str]:
-    body, light = FAMILY_COLORS.get(family, FAMILY_COLORS["unknown"])
+    if family.startswith("other:"):
+        body, light = _random_colors(family)
+    else:
+        body, light = FAMILY_COLORS.get(family, FAMILY_COLORS["unknown"])
     return {
         "o": "#2b1d14", "b": body, "l": light, "e": "#1a1a1a", "p": "#ff8fa3",
         "y": "#ffd23f", "g": "#aab0b7", "u": "#4aa3ff", "n": "#46c28a",
