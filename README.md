@@ -30,6 +30,9 @@ Run `PixelBuddy-Setup.exe` (per-user install, no admin rights needed). During se
 - ☑ Install hooks in Claude Code (your existing `~/.claude/settings.json` is backed up)
 
 Uninstalling from Settings → Apps removes the autostart entry and the hooks too.
+
+> **"Windows protected your PC" warning?** The installer is not code-signed yet, so Microsoft Defender SmartScreen shows "Unknown publisher" for new downloads. This is expected and does not mean the file is malicious. Click **More info → Run anyway** to continue. You can also build the installer yourself (see below) or run from source.
+
 Build the installer yourself: `powershell -ExecutionPolicy Bypass -File packaging\build.ps1` ([Inno Setup 6](https://jrsoftware.org/isinfo.php) is required for the final step; without it you only get `dist\PixelBuddy\PixelBuddy.exe`)
 
 ### System tray menu (right-click the icon, or right-click a buddy)
