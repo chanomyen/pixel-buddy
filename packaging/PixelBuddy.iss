@@ -2,11 +2,14 @@
 ; Per-user install: no admin prompt.
 #define AppName "Pixel Buddy"
 #define AppExe "PixelBuddy.exe"
+#ifndef AppVersion
+  #define AppVersion "0.2.0"
+#endif
 
 [Setup]
 AppId={{6F1D3C52-7B0E-4E55-9C7A-5B1D0C6A9E21}
 AppName={#AppName}
-AppVersion=0.2.0
+AppVersion={#AppVersion}
 AppPublisher=Pixel Buddy
 DefaultDirName={localappdata}\Programs\PixelBuddy
 DefaultGroupName={#AppName}

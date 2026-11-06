@@ -23,7 +23,9 @@ if (-not $iscc) {
               "$env:ProgramFiles\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
 }
 if ($iscc) {
-    & $iscc packaging\PixelBuddy.iss
+    $isccArgs = @()
+    if ($env:ISCC_VERSION) { $isccArgs += "/DAppVersion=$($env:ISCC_VERSION)" }
+    & $iscc @isccArgs packaging\PixelBuddy.iss
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
     Write-Host "OK: dist\PixelBuddy-Setup.exe"
 } else {
